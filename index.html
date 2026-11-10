@@ -192,7 +192,7 @@ function sb(path, opt){
     headers:Object.assign({apikey:C.SUPABASE_ANON,Authorization:"Bearer "+C.SUPABASE_ANON,"Content-Type":"application/json"},opt.headers||{}),
     body:opt.body?JSON.stringify(opt.body):undefined}).then(function(r){
       if(!r.ok) throw new Error("HTTP "+r.status);
-      return r.status===204?null:r.json();});
+      return r.text().then(function(t){return t?JSON.parse(t):null});});
 }
 function chargerMenu(){
   if(!SB) return Promise.resolve(window.AUSPICES_DEMO);
