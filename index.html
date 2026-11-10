@@ -253,7 +253,7 @@ function initBook(cats){
   /* Garde au niveau du conteneur : posée avant StPageFlip, en capture, elle bloque tout geste qui démarre sur un bouton. */
   (function(){
     var bk=$("book"),SEL=".add-btn,.btn-appel,.btn-wa,.add-btn-placeholder,a";
-    ["touchstart","touchmove","touchend","mousedown","mousemove","mouseup","pointerdown","pointermove","pointerup"].forEach(function(ev){
+    ["touchstart","touchmove","touchend","mousedown","mousemove","mouseup"].forEach(function(ev){
       bk.addEventListener(ev,function(e){if(e.target&&e.target.closest&&e.target.closest(SEL)){e.stopImmediatePropagation()}},true);
     });
   })();
