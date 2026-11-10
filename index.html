@@ -180,6 +180,7 @@ var C = window.AUSPICES, $ = function(i){return document.getElementById(i)};
 var SB = C.SUPABASE_URL && C.SUPABASE_ANON;
 var pageFlip=null, totalPages=1, lastFlip=0, cart=[], busy=false, categoriesData=[], ouvert=true;
 
+function uuid(){if(window.crypto&&crypto.randomUUID)return crypto.randomUUID();return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g,function(c){var r=Math.random()*16|0;return (c==="x"?r:(r&3|8)).toString(16)})}
 function esc(t){var d=document.createElement("div");d.textContent=t==null?"":String(t);return d.innerHTML}
 function fmt(n){n=Number(n);return (n%1===0?n.toFixed(0):n.toFixed(2))+C.DEVISE}
 function toast(m){var t=$("toast");t.textContent=m;t.classList.add("show");setTimeout(function(){t.classList.remove("show")},2800)}
@@ -249,6 +250,13 @@ function initBook(cats){
   $("book").innerHTML=html;
   var items=document.querySelectorAll("#book .page-item");
   totalPages=items.length;
+  /* Garde au niveau du conteneur : posée avant StPageFlip, en capture, elle bloque tout geste qui démarre sur un bouton. */
+  (function(){
+    var bk=$("book"),SEL=".add-btn,.btn-appel,.btn-wa,.add-btn-placeholder,a";
+    ["touchstart","touchmove","touchend","mousedown","mousemove","mouseup","pointerdown","pointermove","pointerup"].forEach(function(ev){
+      bk.addEventListener(ev,function(e){if(e.target&&e.target.closest&&e.target.closest(SEL)){e.stopImmediatePropagation()}},true);
+    });
+  })();
   pageFlip=new St.PageFlip($("book"),{width:380,height:540,size:"stretch",minWidth:280,maxWidth:420,minHeight:400,maxHeight:620,
     drawShadow:true,flippingTime:500,usePortrait:true,startZIndex:0,autoSize:true,maxShadowOpacity:.6,showCover:true,
     mobileScrollSupport:false,swipeDistance:30,clickEventForward:false,useMouseEvents:true,disableFlipByClick:false});
@@ -334,16 +342,17 @@ function submitOrder(){
   var fail=function(){toast("Envoi impossible. Appelez le serveur.")};
   var fin=function(){busy=false;btn.textContent="Envoyer la commande";renderCart()};
   if(!SB){setTimeout(function(){done();fin()},500);return}  // mode démo
-  sb("commandes",{method:"POST",headers:{Prefer:"return=representation"},body:{numero_table:table,demandes_speciales:notes,montant_total:total()}})
-  .then(function(r){var cmd=r[0];
-    return sb("commande_items",{method:"POST",body:cart.map(function(i){return {commande_id:cmd.id,produit_id:i.id||null,nom_produit:i.name,prix_unit:i.price,quantite:i.quantity}})})})
-  .then(done).catch(fail).then(fin);
+  var cid=uuid();
+  sb("commandes",{method:"POST",headers:{Prefer:"return=minimal"},body:{id:cid,numero_table:table,demandes_speciales:notes,montant_total:total()}})
+  .then(function(){
+    return sb("commande_items",{method:"POST",headers:{Prefer:"return=minimal"},body:cart.map(function(i){return {commande_id:cid,produit_id:i.id||null,nom_produit:i.name,prix_unit:i.price,quantite:i.quantity}})})})
+  .then(done).catch(function(e){console.error(e);fail()}).then(fin);
 }
 $("submitOrder").onclick=submitOrder;
 function appelServeur(){
   var t=prompt("Votre numéro de table ?"); if(!t)return;
   if(!SB){toast("Le serveur arrive (mode démo)");return}
-  sb("appels_serveur",{method:"POST",body:{numero_table:t.trim()}}).then(function(){toast("Le serveur a été prévenu")}).catch(function(){toast("Échec de l'appel")});
+  sb("appels_serveur",{method:"POST",headers:{Prefer:"return=minimal"},body:{numero_table:t.trim()}}).then(function(){toast("Le serveur a été prévenu")}).catch(function(){toast("Échec de l'appel")});
 }
 
 
